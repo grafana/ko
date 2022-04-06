@@ -25,6 +25,7 @@ package sbom
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 )
 
 // BuildInfo represents the build information read from a Go binary.
@@ -132,14 +133,12 @@ func (bi *BuildInfo) UnmarshalText(data []byte) (err error) {
 			}
 			last = nil
 		case bytes.HasPrefix(line, buildLine):
-			elem := bytes.Split(line[len(buildLine):], tab)
-			if len(elem) != 2 {
-				return fmt.Errorf("expected 2 columns for build setting; got %d", len(elem))
+			re := regexp.MustCompile(`^([^\t=]+)[\t=](.+)$`)
+			ms := re.FindSubmatch(line[len(buildLine):])
+			if len(ms) == 0 {
+				return fmt.Errorf("expected 2 columns for build setting; got %q", string(line[len(buildLine):]))
 			}
-			if len(elem[0]) == 0 {
-				return fmt.Errorf("empty key")
-			}
-			bi.Settings = append(bi.Settings, BuildSetting{Key: string(elem[0]), Value: string(elem[1])})
+			bi.Settings = append(bi.Settings, BuildSetting{Key: string(ms[1]), Value: string(ms[2])})
 		}
 		lineNum++
 	}
